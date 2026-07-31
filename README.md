@@ -3,8 +3,8 @@
 - 基于 Node.js 的 QQ 农场自动化工具，支持多账号管理、Web 控制面板、实时日志与数据分析。
 - 更新优化日志详见update.log 感谢支持，喜欢的点一个star⭐吧！
 - 默认账号密码都是admin，端口3007，请部署登录后尽快修改密码！
-- 重构版V2.4.5完整更新日志详见：[更新日志](https://gitee.com/xlzcandy/qq-classic-farm-update-log/blob/master/README.md)
-## 开源版停止维护，但是请不要贩卖开源版本，免费项目，禁止倒卖！所有功能都是正常使用的，只需要更新一下core/src/config/config.js里面的版本号然后重启后端即可，一定要重启后端，docker部署的需要删除容器重新构建才生效。关于微信扫码为什么不行，因为我压根儿没有内置协议，我只是提供了一个可以供你们配置接口的地方不代表运行就可以扫码，别来找我问我为什么不能扫码了，自己去找协议部署或者找第三方接口！开源版本请自行解决各种部署问题、使用问题等，感谢各位支持！
+- 重构版V2.5.1完整更新日志详见：[更新日志](https://gitee.com/xlzcandy/qq-classic-farm-update-log/blob/master/README.md)
+## 请不要贩卖开源版本，免费项目，禁止倒卖！所有功能都是正常使用的，只需要更新一下core/src/config/config.js里面的版本号然后重启后端即可，一定要重启后端，docker部署的需要删除容器重新构建才生效。关于微信扫码为什么不行，因为目前我压根儿没有内置协议，我只是提供了一个可以供你们配置接口的地方不代表运行就可以扫码，别来找我问我为什么不能扫码了，自己去找协议部署或者找第三方接口！开源版本请自行解决各种部署问题、使用问题等，感谢各位支持！目前官方已经把三分钟风控给关了，所以开源版也正常偷菜了，八月会对开源版进行一次小更新，更新资源包到最新版本同时务农接口也更新到最新接口。内置一个yyb_go的开源应用宝协议，供微信玩家使用~
 ---
 ## 技术栈
 
@@ -153,15 +153,6 @@ qq-farm-bot-ui/
 ├── pnpm-workspace.yaml
 └── package.json
 ```
-
----
-
-## 特别感谢
-- 基于[Penty-d/qq-farm-bot-ui](https://github.com/Penty-d/qq-farm-bot-ui)二改
-- 核心功能：[linguo2625469/qq-farm-bot](https://github.com/linguo2625469/qq-farm-bot)
-- 部分功能：[QianChenJun/qq-farm-bot](https://github.com/QianChenJun/qq-farm-bot)
-- 扫码登录：[lkeme/QRLib](https://github.com/lkeme/QRLib)
-- 推送通知：[imaegoo/pushoo](https://github.com/imaegoo/pushoo)
 
 ## 免责声明
 
