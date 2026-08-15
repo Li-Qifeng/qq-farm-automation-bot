@@ -1,6 +1,7 @@
 packages:
   - core
   - web
+  - cli
 
 ignoredBuiltDependencies:
   - '@parcel/watcher'
