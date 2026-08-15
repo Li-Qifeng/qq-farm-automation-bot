@@ -2093,6 +2093,14 @@ function startAdminServer(dataProvider) {
         try {
             const body = (req.body && typeof req.body === 'object') ? req.body : {};
             const currentUser = req.currentUser;
+
+            // 如果 code 是完整 URL，提取纯 hex code
+            if (body.code && typeof body.code === 'string' && body.code.includes('?')) {
+                const m = body.code.match(/&code=([a-f0-9]+)/);
+                if (m) {
+                    body.code = m[1];
+                }
+            }
             const isUpdate = !!body.id;
 
             // 检查权限：普通用户只能更新自己的账号
