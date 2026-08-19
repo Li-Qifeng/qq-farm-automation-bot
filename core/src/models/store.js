@@ -1128,7 +1128,16 @@ function addOrUpdateAccount(acc) {
     if (acc.id) {
         const idx = data.accounts.findIndex(a => a.id === acc.id);
         if (idx >= 0) {
-            data.accounts[idx] = { ...data.accounts[idx], ...acc, name: acc.name !== undefined ? acc.name : data.accounts[idx].name, updatedAt: Date.now() };
+            data.accounts[idx] = {
+                ...data.accounts[idx],
+                ...acc,
+                name: acc.name !== undefined ? acc.name : data.accounts[idx].name,
+                wxid: acc.wxid !== undefined ? acc.wxid : data.accounts[idx].wxid,
+                loginBuffer: acc.loginBuffer !== undefined ? acc.loginBuffer : data.accounts[idx].loginBuffer,
+                refreshtoken: acc.refreshtoken !== undefined ? acc.refreshtoken : data.accounts[idx].refreshtoken,
+                accesstoken: acc.accesstoken !== undefined ? acc.accesstoken : data.accounts[idx].accesstoken,
+                updatedAt: Date.now()
+            };
             touchedAccountId = String(data.accounts[idx].id || '');
         }
     } else {
@@ -1142,7 +1151,11 @@ function addOrUpdateAccount(acc) {
             uin: acc.uin ? String(acc.uin) : '',
             qq: acc.qq ? String(acc.qq) : (acc.uin ? String(acc.uin) : ''),
             avatar: acc.avatar || acc.avatarUrl || '',
-            username: acc.username || '', // 保存用户名字段
+            username: acc.username || '',
+            wxid: acc.wxid || '',
+            loginBuffer: acc.loginBuffer || '',
+            refreshtoken: acc.refreshtoken || '',
+            accesstoken: acc.accesstoken || '',
             createdAt: Date.now(),
             updatedAt: Date.now(),
         });
