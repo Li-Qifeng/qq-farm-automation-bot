@@ -58,7 +58,7 @@ function createRuntimeEngine(options = {}) {
     triggerOfflineReminder,
   } = reloginReminder
 
-  const { startWorker, stopWorker, restartWorker, callWorkerApi } = createWorkerManager({
+  const { startWorker, stopWorker, restartWorker, callWorkerApi, startWxKeepalive, stopWxKeepalive } = createWorkerManager({
     fork,
     WorkerThread: Worker,
     runtimeMode,
@@ -154,6 +154,11 @@ function createRuntimeEngine(options = {}) {
 
     if (shouldAutoStartAccounts) {
       startAllAccounts()
+    }
+
+    // 启动微信凭证保活调度（30分钟刷新一次 refreshtoken）
+    if (startWxKeepalive) {
+      startWxKeepalive()
     }
   }
 

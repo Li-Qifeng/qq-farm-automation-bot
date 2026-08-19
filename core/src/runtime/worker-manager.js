@@ -24,6 +24,66 @@ function createWorkerManager(options) {
     const managerScheduler = createScheduler('worker_manager');
     const useThreadRuntime = runtimeMode === 'thread' && !processRef.pkg && typeof WorkerThread === 'function';
 
+    // 微信扫码凭证保活：每 30 分钟为持久化账号刷新 refreshtoken + loginBuffer
+    const WX_KEEPALIVE_INTERVAL_MS = 30 * 60 * 1000;
+    let wxKeepaliveTimer = null;
+    let wxKeepalivePending = null;
+
+    async function wxCredentialKeepaliveTick() {
+        if (wxKeepalivePending) return;
+        try {
+            wxKeepalivePending = wxKeepaliveTickAsync();
+            await wxKeepalivePending;
+        } finally {
+            wxKeepalivePending = null;
+        }
+    }
+    async function wxKeepaliveTickAsync() {
+        // 动态 require，避免循环依赖
+        const { keepWxCredentialAlive } = require('../services/wx-login/wx-login-adapter');
+        const { getAccounts } = require('../models/store');
+        const accountsData = (typeof getAccounts === 'function') ? getAccounts() : { accounts: [] };
+        const accounts = Array.isArray(accountsData) ? accountsData : accountsData.accounts || [];
+        for (const acc of accounts) {
+            if (!acc || !acc.id || !acc.wxid || !acc.refreshtoken) continue;
+            const wid = `wx_keepalive_${acc.id}`;
+            try {
+                await managerScheduler.setTimeoutTask(wid, 0, async () => {
+                    const result = await keepWxCredentialAlive(acc);
+                    if (!result.Success) {
+                        log('警告', `微信凭证保活失败 [${acc.name}]: ${result.Message}`, {
+                            accountId: acc.id,
+                            accountName: acc.name,
+                        });
+                    }
+                });
+                // 等待该账号的 keepalive 完成，避免并发打乱滚动续期
+                await new Promise(r => setTimeout(r, 0));
+            } catch (e) {
+                managerScheduler.clear(wid);
+                log('警告', `微信凭证保活异常 [${acc.name}]: ${e.message}`, {
+                    accountId: acc.id,
+                    accountName: acc.name,
+                });
+            }
+        }
+    }
+    function startWxKeepalive() {
+        if (wxKeepaliveTimer) return;
+        // 立即执行一次首刷
+        wxCredentialKeepaliveTick();
+        wxKeepaliveTimer = setInterval(wxCredentialKeepaliveTick, WX_KEEPALIVE_INTERVAL_MS);
+        if (wxKeepaliveTimer && typeof wxKeepaliveTimer.unref === 'function') {
+            wxKeepaliveTimer.unref();
+        }
+    }
+    function stopWxKeepalive() {
+        if (wxKeepaliveTimer) {
+            clearInterval(wxKeepaliveTimer);
+            wxKeepaliveTimer = null;
+        }
+    }
+
     function createThreadWorker(account) {
         const worker = new WorkerThread(workerScriptPath, {
             workerData: {
@@ -355,6 +415,8 @@ function createWorkerManager(options) {
         stopWorker,
         restartWorker,
         callWorkerApi,
+        startWxKeepalive,
+        stopWxKeepalive,
     };
 }
 

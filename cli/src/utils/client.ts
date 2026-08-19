@@ -146,7 +146,6 @@ export class ApiClient {
   async saveSettings(accountId: string, body: Record<string, any>) { return this.request('POST', '/api/settings/save', body, { 'x-account-id': accountId }); }
   async setAutomation(accountId: string, key: string, value: any) { return this.request('POST', '/api/automation', { [key]: value }, { 'x-account-id': accountId }); }
   async setTheme(theme: string) { return this.request('POST', '/api/settings/theme', { theme }); }
-  async getOfflineReminder() { return this.request('GET', '/api/settings/offline-reminder'); }
   async setOfflineReminder(cfg: Record<string, any>) { return this.request('POST', '/api/settings/offline-reminder', cfg); }
   async testOfflineReminder() { return this.request('POST', '/api/settings/offline-reminder/test', {}); }
 

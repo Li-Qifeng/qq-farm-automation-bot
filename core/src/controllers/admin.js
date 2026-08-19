@@ -19,6 +19,13 @@ const { addOrUpdateAccount, deleteAccount } = store;
 const { findAccountByRef, normalizeAccountRef, resolveAccountId } = require('../services/account-resolver');
 const { createModuleLogger } = require('../services/logger');
 const { MiniProgramLoginSession } = require('../services/qrlogin');
+const {
+    getQRCode,
+    checkQR,
+    getFarmCode,
+    peekPendingWxInfo,
+    consumePendingWxInfo,
+} = require('../services/wx-login/wx-login-adapter');
 const { getSchedulerRegistrySnapshot } = require('../services/scheduler');
 const userStore = require('../models/user-store');
 
@@ -461,7 +468,7 @@ function startAdminServer(dataProvider) {
     });
 
     app.use('/api', (req, res, next) => {
-        if (req.path === '/login' || req.path === '/qr/create' || req.path === '/qr/check' || req.path === '/proxy' || req.path === '/card-claim/status' || req.path === '/card-claim/claim' || req.path === '/game-version') return next();
+        if (req.path === '/login' || req.path === '/qr/create' || req.path === '/qr/check' || req.path === '/proxy' || req.path === '/card-claim/status' || req.path === '/card-claim/claim' || req.path === '/game-version' || req.path === '/wx/qr/create' || req.path === '/wx/qr/check' || req.path === '/wx/qr/confirm' || req.path === '/wx/code') return next();
         return authRequired(req, res, next);
     });
 
@@ -2361,6 +2368,98 @@ function startAdminServer(dataProvider) {
             }
         } catch (e) {
             res.status(500).json({ ok: false, error: e.message });
+        }
+    });
+
+    // ============ 微信原生扫码登录 API (应用宝 OAuth + MMTLS) ============
+    // 这些接口不需要 authRequired 也能调用（用于扫码登录流程）
+    // POST /api/wx/qr/create — 创建微信二维码会话
+    app.post('/api/wx/qr/create', async (req, res) => {
+        try {
+            const owner = (req.currentUser && req.currentUser.username) || 'anonymous';
+            const result = await getQRCode(owner);
+            res.json(result);
+        } catch (e) {
+            res.status(500).json({ Success: false, Message: e.message });
+        }
+    });
+
+    // POST /api/wx/qr/check — 轮询扫码状态（等待/已扫/已授权/取消/过期）
+    app.post('/api/wx/qr/check', async (req, res) => {
+        const { uuid } = req.body || {};
+        if (!uuid) {
+            return res.status(400).json({ Success: false, Message: 'Missing uuid' });
+        }
+        const owner = (req.currentUser && req.currentUser.username) || 'anonymous';
+        try {
+            const result = await checkQR(uuid, owner);
+            res.json(result);
+        } catch (e) {
+            res.status(500).json({ Success: false, Message: e.message });
+        }
+    });
+
+    // POST /api/wx/qr/confirm — 确认后获取农场 loginBuffer/accesstoken
+    // 请求体: { uuid, nickname?, avatar? }
+    // 响应体: { Success, Data: { loginBuffer, refreshtoken, accesstoken, openid, avatar?, nickname? } }
+    app.post('/api/wx/qr/confirm', async (req, res) => {
+        const { uuid, nickname, avatar } = req.body || {};
+        if (!uuid) {
+            return res.status(400).json({ Success: false, Message: 'Missing uuid' });
+        }
+        const owner = (req.currentUser && req.currentUser.username) || 'anonymous';
+        try {
+            // 确认会话并持久化 loginBuffer / token
+            const checkResult = await checkQR(uuid, owner);
+            if (!checkResult.Success || !checkResult.Data || !checkResult.Data.acctSectResp) {
+                return res.json({ Success: false, Message: checkResult.Message || '扫码尚未完成授权' });
+            }
+            const openid = String(checkResult.Data.acctSectResp.userName || '');
+            // peek 拿到会话凭证快照
+            const pending = peekPendingWxInfo(uuid, openid, owner);
+            if (!pending) {
+                return res.json({ Success: false, Message: '扫码会话凭证不存在，请重新扫码' });
+            }
+            // 消费会话，防止重复使用
+            consumePendingWxInfo(uuid, openid, owner);
+            res.json({
+                Success: true,
+                Data: {
+                    loginBuffer: pending.loginBuffer,
+                    refreshtoken: pending.refreshtoken,
+                    accesstoken: pending.accesstoken,
+                    openid,
+                    avatar: pending.avatar || avatar || '',
+                    nickname: pending.nickname || nickname || checkResult.Data.acctSectResp.nickName || '',
+                },
+            });
+        } catch (e) {
+            res.status(500).json({ Success: false, Message: e.message });
+        }
+    });
+
+    // GET /api/wx/code?accountId=X — 用已持久化的 loginBuffer 换取农场 code
+    // 若 loginBuffer 过期，自动使用 refreshtoken 续期再换
+    app.get('/api/wx/code', async (req, res) => {
+        const accountId = req.query.accountId;
+        if (!accountId) {
+            return res.status(400).json({ Success: false, Message: 'Missing accountId' });
+        }
+        try {
+            // 通过 accountId 查账号拿到 openid（wxid 字段）
+            const before = provider.getAccounts();
+            const acct = (before.accounts || []).find(a => String(a.id) === String(accountId));
+            if (!acct) {
+                return res.status(404).json({ Success: false, Message: 'Account not found' });
+            }
+            const openid = String(acct.wxid || '');
+            if (!openid) {
+                return res.status(400).json({ Success: false, Message: 'Account has no wxid, please scan code to login first' });
+            }
+            const result = await getFarmCode(openid, { accountId: String(accountId) });
+            res.json(result);
+        } catch (e) {
+            res.status(500).json({ Success: false, Message: e.message });
         }
     });
 

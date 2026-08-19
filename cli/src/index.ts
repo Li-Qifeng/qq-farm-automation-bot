@@ -183,6 +183,23 @@ accCmd
   });
 
 accCmd
+  .command('update')
+  .description('更新账号信息（code/名称/平台）')
+  .argument('<id>', '账号 ID')
+  .option('-c, --code <code>', '登录 code（完整 URL 或 hex）')
+  .option('-n, --name <name>', '账号名称')
+  .option('-p, --platform <platform>', '平台 (qq/wechat)')
+  .action(async (id, options) => {
+    const client = getClient();
+    const body: any = { id };
+    if (options.code) body.code = options.code;
+    if (options.name) body.name = options.name;
+    if (options.platform) body.platform = options.platform;
+    await client.addAccount(body);
+    printSuccess('账号已更新');
+  });
+
+accCmd
   .command('logs')
   .description('查看账号日志')
   .option('-l, --limit <n>', '条数', '100')
@@ -567,6 +584,21 @@ friendCmd
     printSuccess(`黑名单已切换 (GID: ${gid})`);
   });
 
+friendCmd
+  .command('auto-friend')
+  .description('从访客记录自动添加好友')
+  .action(async () => {
+    const aid = getAccountId();
+    if (!aid) { printError('需要 --account <id>'); process.exit(1); }
+    const client = getClient();
+    const records = await client.getInteractRecords(aid);
+    const list = records.data || [];
+    const gids: number[] = [...new Set(list.map((r: any) => r.visitorGid || r.gid).filter(Boolean))] as number[];
+    if (gids.length === 0) { printInfo('暂无访客记录'); return; }
+    const res = await client.batchAddGids(aid, gids);
+    printSuccess(`已添加 ${gids.length} 个访客为好友`);
+  });
+
 // ======================== CONFIG ========================
 const configCmd = program.command('config').description('配置管理');
 
@@ -600,13 +632,20 @@ configCmd
 
 configCmd
   .command('set')
-  .description('保存配置 (JSON)')
-  .argument('<json>', 'JSON 配置')
-  .action(async (json) => {
+  .description('设置配置项')
+  .argument('<key>', '配置名')
+  .argument('<value>', '配置值')
+  .action(async (key, value) => {
     const aid = getAccountId();
     if (!aid) { printError('需要 --account <id>'); process.exit(1); }
     const client = getClient();
-    const res = await client.saveSettings(aid, JSON.parse(json));
+    let parsed;
+    try { parsed = JSON.parse(value); } catch { parsed = value; }
+    if (['farm','farm_push','land_upgrade','friend','friend_help_exp_limit','friend_steal','friend_help','friend_bad','task','fertilizer_gift','fertilizer_buy_organic','fertilizer_buy_normal','sell','fertilizer','fertilizer_multi_season','fertilizer_land_types','fertilizer_smart_seconds','skip_own_weed_bug'].includes(key)) {
+      await client.setAutomation(aid, key, parsed);
+    } else {
+      await client.saveSettings(aid, { [key]: parsed });
+    }
     printSuccess('配置已保存');
   });
 
@@ -644,8 +683,10 @@ configCmd
       const res = await client.setOfflineReminder(JSON.parse(options.set));
       printSuccess('离线提醒已设置');
     } else {
-      const res = await client.getOfflineReminder();
-      output(res);
+      const aid = getAccountId() || '';
+      const res = await client.getSettings(aid);
+      const reminder = res.data?.offlineReminder || res.offlineReminder || {};
+      output(reminder);
     }
   });
 
