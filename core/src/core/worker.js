@@ -5,7 +5,7 @@ const process = require('node:process');
 const { parentPort, workerData } = require('node:worker_threads');
 const { CONFIG } = require('../config/config');
 const { getLevelExpProgress } = require('../config/gameConfig');
-const { getAutomation, getPreferredSeed, getConfigSnapshot, applyConfigSnapshot, getFertilizerBuyType, getFertilizerBuyCount } = require('../models/store');
+const { getAutomation, getPreferredSeed, getConfigSnapshot, applyConfigSnapshot, getFertilizerBuyType, getFertilizerBuyCount, isAutomationOn } = require('../models/store');
 const { checkAndClaimEmails } = require('../services/email');
 const { getEmailDailyState } = require('../services/email');
 const { checkFarm, startFarmCheckLoop, stopFarmCheckLoop, refreshFarmCheckLoop, getLandsDetail, getAvailableSeeds, runFarmOperation, runFertilizerByConfig } = require('../services/farm');
@@ -544,6 +544,28 @@ async function startBot(config) {
         startUnifiedScheduler();
         // 每日礼包/任务改为跨日调度，不在农场轮询内执行
         startDailyRoutineTimer();
+
+        // 兜底: 定时检查背包并强制出售果实（防止"仓库满→收获失败→事件不触发→永远卖不了"的死锁）
+        // 与 farmHarvested 事件触发互补，sellAllFruits 内部 harvestSellRunning 锁保证不重复
+        if (isAutomationOn('sell')) {
+            const periodicSell = async () => {
+                if (!isRunning) return;
+                try {
+                    const reply = await getBag();
+                    const items = getBagItems(reply) || [];
+                    let totalCount = 0;
+                    for (const it of items) {
+                        totalCount += Math.max(0, toNum(it && it.count));
+                    }
+                    if (totalCount >= 30) {
+                        await sellAllFruits();
+                    }
+                } catch (e) {
+                    log('仓库', `定时兜底出售失败: ${e.message}`, { module: 'warehouse', event: '定时兜底出售', result: 'error' });
+                }
+            };
+            workerScheduler.setIntervalTask('warehouse_periodic_sell', 5 * 60 * 1000, periodicSell, { runImmediately: true });
+        }
 
         // 立即发送一次状态
         syncStatus();
