@@ -2610,6 +2610,11 @@ function startAdminServer(dataProvider) {
     };
 
     const port = CONFIG.adminPort || 3007;
+    try {
+        require('./ingest').registerIngestRoutes(app, provider);
+    } catch (e) {
+        adminLogger.error('ingest routes register failed', { error: e.message });
+    }
     server = app.listen(port, '0.0.0.0', () => {
         adminLogger.info('admin panel started', { url: `http://localhost:${port}`, port });
     });
