@@ -2508,6 +2508,13 @@ function startAdminServer(dataProvider) {
         }
     });
 
+    // ============ Loon 局域网 code 摄取端点 (必须注册在 app.get('*') catch-all 之前) ============
+    try {
+        require('./ingest').registerIngestRoutes(app, provider);
+    } catch (e) {
+        adminLogger.error('ingest routes register failed', { error: e.message });
+    }
+
     app.get('*', (req, res) => {
         if (req.path.startsWith('/api') || req.path.startsWith('/game-config')) {
              return res.status(404).json({ ok: false, error: 'Not Found' });
@@ -2610,11 +2617,6 @@ function startAdminServer(dataProvider) {
     };
 
     const port = CONFIG.adminPort || 3007;
-    try {
-        require('./ingest').registerIngestRoutes(app, provider);
-    } catch (e) {
-        adminLogger.error('ingest routes register failed', { error: e.message });
-    }
     server = app.listen(port, '0.0.0.0', () => {
         adminLogger.info('admin panel started', { url: `http://localhost:${port}`, port });
     });
