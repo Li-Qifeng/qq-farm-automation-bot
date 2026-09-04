@@ -468,7 +468,7 @@ function startAdminServer(dataProvider) {
     });
 
     app.use('/api', (req, res, next) => {
-        if (req.path === '/login' || req.path === '/qr/create' || req.path === '/qr/check' || req.path === '/proxy' || req.path === '/card-claim/status' || req.path === '/card-claim/claim' || req.path === '/game-version' || req.path === '/wx/qr/create' || req.path === '/wx/qr/check' || req.path === '/wx/qr/confirm' || req.path === '/wx/code' || req.path === '/ingest/code' || req.path === '/ingest/status') return next();
+        if (req.path === '/login' || req.path === '/qr/create' || req.path === '/qr/check' || req.path === '/proxy' || req.path === '/card-claim/status' || req.path === '/card-claim/claim' || req.path === '/game-version' || req.path === '/wx/qr/create' || req.path === '/wx/qr/check' || req.path === '/wx/qr/confirm' || req.path === '/wx/code' || req.path.startsWith('/ingest/')) return next();
         return authRequired(req, res, next);
     });
 
