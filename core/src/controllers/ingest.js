@@ -6,11 +6,14 @@
 // 状态查询（Loon 插件面板轮询）：
 //   GET /api/ingest/status → { accounts: [{id,name,platform,connected,lastError}] }
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const store = require('../models/store');
 
 const PLATFORM_ACCOUNT = { qq: '1', wx: '4' };
 const INGEST_TOKEN = process.env.INGEST_TOKEN || 'qqfarm-loon-2026';
 const TOKEN_BUF = Buffer.from(INGEST_TOKEN);
+const LOON_DIR = path.join(__dirname, '..', '..', 'data', 'loon');
 
 function registerIngestRoutes(app, provider) {
     const restartTimers = new Map(); // accountId -> timeout handle，防抖
@@ -66,6 +69,17 @@ function registerIngestRoutes(app, provider) {
         } catch (e) {
             res.status(500).json({ ok: false, error: e.message });
         }
+    });
+
+    // Loon 脚本分发：手机插件用 URL 引用，文件放数据卷，改脚本无需重导插件
+    app.get('/api/ingest/script/:name', (req, res) => {
+        const name = String(req.params.name || '');
+        if (!/^[a-z0-9_-]+\.js$/.test(name)) return res.status(400).json({ ok: false, error: 'bad name' });
+        const file = path.join(LOON_DIR, name);
+        if (!fs.existsSync(file)) return res.status(404).json({ ok: false, error: 'script not found' });
+        res.set('Content-Type', 'application/javascript; charset=utf-8');
+        res.set('Cache-Control', 'no-cache');
+        fs.createReadStream(file).pipe(res);
     });
 
     app.get('/api/ingest/status', (req, res) => {
