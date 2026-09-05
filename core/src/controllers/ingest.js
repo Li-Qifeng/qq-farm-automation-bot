@@ -19,14 +19,18 @@ function registerIngestRoutes(app, provider) {
     const restartTimers = new Map(); // accountId -> timeout handle，防抖
 
     function tokenOk(candidate) {
-        if (typeof candidate !== 'string' || candidate.length !== TOKEN_BUF.length) return false;
-        return crypto.timingSafeEqual(Buffer.from(candidate), TOKEN_BUF);
+        // 容错：重复 header 会被 Node 拼成数组；Loon 可能带不可见空白
+        let s = Array.isArray(candidate) ? String(candidate[0] || '') : (typeof candidate === 'string' ? candidate : '');
+        s = s.trim();
+        if (!s || s.length !== TOKEN_BUF.length) return false;
+        return crypto.timingSafeEqual(Buffer.from(s), TOKEN_BUF);
     }
 
     app.post('/api/ingest/code', (req, res) => {
         // 双通道：header 或 ?t= 查询参数（Loon $httpClient 自定义 header 不可靠）
-        if (!tokenOk(req.headers['x-ingest-token'] || '') && !tokenOk(String(req.query.t || ''))) {
-            console.log(JSON.stringify({ module: 'ingest', level: 'warn', message: '401 bad token', gotHeader: req.headers['x-ingest-token'] === undefined ? 'ABSENT' : String(req.headers['x-ingest-token']).slice(0, 40), gotQuery: req.query.t ? String(req.query.t).slice(0, 40) : 'ABSENT', headerKeys: Object.keys(req.headers).join(',') }));
+        const hdr = req.headers['x-ingest-token'];
+        if (!tokenOk(hdr) && !tokenOk(String(req.query.t || ''))) {
+            console.log(JSON.stringify({ module: 'ingest', level: 'warn', message: '401 bad token', hdrJson: hdr === undefined ? 'ABSENT' : JSON.stringify(hdr), hdrLen: hdr === undefined ? -1 : String(Array.isArray(hdr) ? hdr[0] : hdr).length, queryLen: req.query.t ? String(req.query.t).length : -1, ua: String(req.headers['user-agent'] || '').slice(0, 60) }));
             return res.status(401).json({ ok: false, error: 'bad ingest token' });
         }
 
