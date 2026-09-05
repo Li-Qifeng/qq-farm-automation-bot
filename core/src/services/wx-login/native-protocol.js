@@ -40,7 +40,7 @@ exports.getNativeWxLoginCode = getNativeWxLoginCode;
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const net = __importStar(require("node:net"));
 const U8 = Buffer.from;
-const REC = 61699;
+const REC = 61700;
 const HOST_APP = U8("wxd44977328b36e647");
 const SERVER_PUB = Buffer.from("04ef87876d6478b15f1796eab12068610541173b7176b67f1dcc86683e901acd44d18b4ac36938251d0812dd0cf842aa2d6cbb8115712d1c0087dcefc14a44cd58", "hex");
 const TRANSFER_PATH = U8("/ilink/ilinkapp/mp/wxaruntime_transfer");
@@ -268,11 +268,11 @@ function ecdh() {
 }
 function ch(pub1, pub2) {
     const r = node_crypto_1.default.randomBytes(32);
-    const b = [Buffer.from([3, 241, 1, 192, 43]), r, Buffer.alloc(4)];
+    const b = [Buffer.from([4, 241, 2, 192, 43, 0, 168]), r, Buffer.alloc(4)];
     b[2].writeUInt32BE(Math.floor(Date.now() / 1e3));
     const offers = [pub1, pub2].map((p, i) => {
         const x = Buffer.alloc(6);
-        x.writeUInt32BE(i ? 2 : 1);
+        x.writeUInt32BE(i ? 1000 : 7);
         x.writeUInt16BE(65, 4);
         const z = Buffer.concat([x, p]);
         const n2 = Buffer.alloc(4);
@@ -295,7 +295,7 @@ function pskClientHello(ticket, timestamp) {
     const ticketExtension = Buffer.concat([Buffer.from([0, 15, 1]), u32(ticket.length), ticket]);
     const extension = Buffer.concat([Buffer.from([1]), u32(ticketExtension.length), ticketExtension]);
     const body = Buffer.concat([
-        Buffer.from([3, 241, 1, 0, 168]),
+        Buffer.from([4, 241, 1, 0, 168]),
         node_crypto_1.default.randomBytes(32),
         u32(timestamp),
         u32(extension.length),
@@ -360,11 +360,12 @@ function oneWayKeys(secret, label, hash) {
 function manualRequest(buffer, app) {
     const raw = Buffer.from(buffer, "base64");
     const f = pbf(raw);
-    const ticket = f.get(1);
+    let ticket = f.get(1);
     const device = f.get(2);
     const host = f.get(3);
     if (!Buffer.isBuffer(ticket) || !ticket.length || !Buffer.isBuffer(device) || !device.length)
         throw new Error("invalid login buffer");
+    if (process.env.WX_TICKET_HEX) ticket = Buffer.from(process.env.WX_TICKET_HEX, "hex"); // TEMP EXPERIMENT
     const base = Buffer.concat([pbl(1, app), pbv(2, 1901)]);
     const req = Buffer.concat([pbl(1, base), pbl(3, pbl(1, ticket)), pbv(4, 4), pbl(6, Buffer.alloc(0)), pbv(7, 0), pbv(8, 6)]);
     return { req, device, host: Buffer.isBuffer(host) && host.length ? host : HOST_APP };
@@ -414,6 +415,12 @@ function parseManual(body, temp) {
     const plain = lz4(unlayout(secret.subarray(0, 24), ct, aad));
     const manual = pbf(plain);
     const bodyFields = pbf(requiredField(manual, 3, "ManualAuthResponse field 3"));
+    if (process.env.WX_DEBUG) {
+        const dump = (o) => Object.fromEntries([...o.entries()].map(([k, v]) => [k, Buffer.isBuffer(v) ? `<${v.length}B ${v.subarray(0, 40).toString("hex")}${v.length > 40 ? "..." : ""}>` : String(v)]));
+        console.error("[WX_DEBUG] plain lz4 len:", plain.length, "hex head:", plain.subarray(0, 60).toString("hex"));
+        console.error("[WX_DEBUG] manual fields:", JSON.stringify(dump(manual)));
+        console.error("[WX_DEBUG] bodyFields:", JSON.stringify(dump(bodyFields)));
+    }
     if (!Buffer.isBuffer(bodyFields.get(2))) {
         const code = bodyFields.get(4);
         const message = bodyFields.get(5);
@@ -491,7 +498,7 @@ async function getNativeWxLoginCode(loginBuffer, appId) {
             const serverHello = splitHs(sh.body).body;
             const extLength = serverHello.readUInt32BE(36);
             const ext = serverHello.subarray(40, 40 + extLength);
-            if (ext.length < 78 || ext[0] !== 1)
+            if (ext.length < 78 || (ext[0] !== 1 && ext[0] !== 2))
                 throw new Error("invalid ServerHello key-share extension");
             const secret = node_crypto_1.default.createHash("sha256").update(a.e.computeSecret(ext.subarray(13, 78))).digest();
             const transcript = [hello, sh.body];

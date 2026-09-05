@@ -72,9 +72,9 @@ function registerIngestRoutes(app, provider) {
             restartTimers.set(accountId, setTimeout(() => {
                 restartTimers.delete(accountId);
                 try { provider.startAccount(accountId); } catch (e) { /* ignore */ }
-            }, 25000));
+            }, 8000));
 
-            res.json({ ok: true, action: 'restart-scheduled', accountId, platform, connected: false, message: 'code 已保存，25 秒后自动重连' });
+            res.json({ ok: true, action: 'restart-scheduled', accountId, platform, connected: false, message: 'code 已保存，8 秒后自动重连' });
         } catch (e) {
             res.status(500).json({ ok: false, error: e.message });
         }
