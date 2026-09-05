@@ -1,0 +1,12 @@
+#!name=QQ农场
+#!desc=自动抓取农场 code + 双号状态面板（脚本经 jsdelivr CDN 分发）
+
+[MITM]
+hostname = gate-obt.nqf.qq.com
+
+[Panel]
+QQ农场 = script-name=qqfarm-panel, update-interval=30m
+
+[Script]
+http-request gate-obt\.nqf\.qq\.com/prod/ws script-path=https://cdn.jsdelivr.net/gh/Li-Qifeng/qq-farm-automation-bot@main/loon/catch-v5.js, requires-body=false, timeout=15, tag=农场code抓取
+qqfarm-panel = type=generic, script-path=https://cdn.jsdelivr.net/gh/Li-Qifeng/qq-farm-automation-bot@main/loon/panel-v4.js, timeout=15, interval=1800, tag=农场状态面板
