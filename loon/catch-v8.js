@@ -2,7 +2,7 @@
 // 微信 code 一次性且不支持顶号：直接对手机返回 403 假响应拦掉 WS 握手，
 // 真 code 不消费、留给 bot（8 秒后接管）。QQ 支持顶号，不拦。
 const NAS = "http://192.168.31.12:3007";
-const TOKEN = "***";
+const TOKEN = "qqfarm-loon-2026";
 const url = $request.url || "";
 console.log("[qqfarm] match: " + url.slice(0, 150));
 let m = url.match(/[?&]platform=(qq|wx)/i);
