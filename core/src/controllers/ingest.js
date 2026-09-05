@@ -34,7 +34,7 @@ function registerIngestRoutes(app, provider) {
             return res.status(401).json({ ok: false, error: 'bad ingest token' });
         }
 
-        const { platform, code } = req.body || {};
+        const { platform, code, ver } = req.body || {};
         if (!code || typeof code !== 'string')
             return res.status(400).json({ ok: false, error: 'missing code' });
         const accountId = PLATFORM_ACCOUNT[String(platform || '').toLowerCase()];
@@ -58,8 +58,10 @@ function registerIngestRoutes(app, provider) {
                     return res.json({ ok: true, action: 'noop', accountId, connected: true, message: 'code 未变化且已连接' });
             }
 
-            // 更新 code（保留账号其他字段）
-            store.addOrUpdateAccount({ id: accountId, code });
+            // 更新 code + clientVersion（服务器校验 code 与 ver 必须配对，版本不一致回 400）
+            const patch = { id: accountId, code };
+            if (typeof ver === 'string' && /^[0-9._-]{4,40}$/.test(ver)) patch.clientVersion = ver;
+            store.addOrUpdateAccount(patch);
 
             // 重启 worker（stop → 等旧进程退出 25s → start），防抖合并短时间多次提交
             if (restartTimers.has(accountId)) {
