@@ -1,7 +1,7 @@
 // QQ农场 code 抓取脚本 (Loon http-request) — NAS 分发版
 // 修改此文件后手机无需重导插件，Loon 每次触发都会重新拉取
 const NAS = "http://192.168.31.12:3007";
-const TOKEN = "***";
+const TOKEN = "qqfarm-loon-2026";
 const url = $request.url || "";
 console.log("[qqfarm] match: " + url.slice(0, 150));
 let m = url.match(/[?&]platform=(qq|wx)/i);
