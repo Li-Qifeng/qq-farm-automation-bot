@@ -153,6 +153,7 @@ function createWorkerManager(options) {
             config: {
                 code: account.code,
                 platform: account.platform,
+                clientVersion: account.clientVersion,
             },
         });
         child.send({ type: 'config_sync', config: buildConfigSnapshotForAccount(account.id) });

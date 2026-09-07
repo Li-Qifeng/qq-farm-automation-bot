@@ -433,9 +433,12 @@ async function startBot(config) {
     if (isRunning) return;
     isRunning = true;
 
-    const { code, platform } = config;
+    const { code, platform, clientVersion } = config;
 
     CONFIG.platform = platform || 'qq';
+    if (clientVersion && typeof clientVersion === 'string' && /^[0-9._-]{4,40}$/.test(clientVersion)) {
+        CONFIG.clientVersion = clientVersion;
+    }
     // 注意：间隔配置由 applyIntervalsToRuntime 统一处理，不要在这里覆盖
 
     await loadProto();
