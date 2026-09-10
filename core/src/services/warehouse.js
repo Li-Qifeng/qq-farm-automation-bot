@@ -105,7 +105,10 @@ async function batchUseItems(items) {
 }
 
 function isFruitItemId(id) {
-    return !!getPlantByFruitId(Number(id));
+    if (getPlantByFruitId(Number(id))) return true;
+    // Plant.json 未收录的新品种兜底：ItemInfo.json type=6(可卖果实) 一律视为果实
+    const item = getItemById(Number(id));
+    return !!(item && String(item.type) === '6');
 }
 
 function getBagItems(bagReply) {
