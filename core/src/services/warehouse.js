@@ -108,7 +108,11 @@ function isFruitItemId(id) {
     if (getPlantByFruitId(Number(id))) return true;
     // Plant.json 未收录的新品种兜底：ItemInfo.json type=6(可卖果实) 一律视为果实
     const item = getItemById(Number(id));
-    return !!(item && String(item.type) === '6');
+    if (item) return String(item.type) === '6';
+    // ItemInfo.json 也会落后(2026-09-11 实测新花连 ItemInfo 都未收录)。
+    // 果实 ID 段兜底：40000-49999 段在已知表中全部为可卖果实(type=6)，段内未知 ID 视为果实。
+    const n = Number(id);
+    return n >= 40000 && n < 50000;
 }
 
 function getBagItems(bagReply) {
