@@ -5,7 +5,7 @@
 hostname = gate-obt.nqf.qq.com
 
 [Panel]
-QQ农场 = script-name=qqfarm-panel, update-interval=30m
+QQ农场 = script-name=qqfarm-panel, interval=1800
 
 [Script]
 http-request gate-obt\.nqf\.qq\.com/prod/ws script-path=https://cdn.jsdelivr.net/gh/Li-Qifeng/qq-farm-automation-bot@main/loon/catch-v10.js, requires-body=false, timeout=15, tag=农场code抓取
