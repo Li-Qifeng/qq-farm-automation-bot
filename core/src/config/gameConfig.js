@@ -234,7 +234,10 @@ function getPlantExp(plantId) {
  */
 function getFruitName(fruitId) {
     const plant = fruitToPlant.get(fruitId);
-    return plant ? plant.name : `果实${fruitId}`;
+    if (plant) return plant.name;
+    const item = getItemById(fruitId);
+    if (item && item.name) return item.name;
+    return `果实${fruitId}`;
 }
 
 /**
