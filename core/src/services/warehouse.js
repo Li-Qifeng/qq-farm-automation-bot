@@ -12,6 +12,7 @@ const { toLong, toNum, log, logWarn, sleep } = require('../utils/utils');
 const { updateStatusGold } = require('./status');
 
 const SELL_BATCH_SIZE = 15;
+const UNSELLABLE_ITEM_IDS = new Set();
 const FERTILIZER_RELATED_IDS = new Set([
     100003, // 化肥礼包
     100004, // 有机化肥礼包
@@ -105,14 +106,15 @@ async function batchUseItems(items) {
 }
 
 function isFruitItemId(id) {
-    if (getPlantByFruitId(Number(id))) return true;
+    const n = Number(id);
+    if (UNSELLABLE_ITEM_IDS.has(n)) return false;
+    if (getPlantByFruitId(n)) return true;
     // Plant.json 未收录的新品种兜底：ItemInfo.json type=6(可卖果实) 或 type=17(变异果实) 一律视为果实
-    const item = getItemById(Number(id));
+    const item = getItemById(n);
     if (item) return String(item.type) === '6' || String(item.type) === '17';
     // ItemInfo.json 也会落后(2026-09-11 实测新花连 ItemInfo 都未收录)。
     // 果实 ID 段兜底：40000-49999 段在已知表中全部为可卖果实(type=6)，段内未知 ID 视为果实。
     // 变异果实 ID 段兜底：1040000-1049999 段为偷菜变异果实(type=17)，堆叠占独立 UID，必须售卖防死锁。
-    const n = Number(id);
     return (n >= 40000 && n < 50000) || (n >= 1040000 && n < 1050000);
 }
 
@@ -462,7 +464,8 @@ async function sellAllFruits() {
                     } catch (singleErr) {
                         const sid = toNum(it.id);
                         const sc = toNum(it.count);
-                        logWarn('仓库', `跳过不可售物品: ID=${sid} x${sc} (${singleErr.message})`, {
+                        UNSELLABLE_ITEM_IDS.add(sid);
+                        logWarn('仓库', `跳过不可售物品: ID=${sid} x${sc} (${singleErr.message})，已加入黑名单防重复请求`, {
                             module: 'warehouse',
                             event: '跳过不可售物品',
                             result: 'skip',
@@ -470,6 +473,7 @@ async function sellAllFruits() {
                             count: sc,
                         });
                     }
+                    await sleep(100);
                 }
             }
             if (i + SELL_BATCH_SIZE < toSell.length) await sleep(300);
