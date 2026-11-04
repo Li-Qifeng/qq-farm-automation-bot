@@ -1,4 +1,4 @@
-// QQ农场 code 抓取脚本 (Loon http-request) — v10.1
+// QQ农场 code 抓取脚本 (Loon http-request) — v10.2
 // 双平台（QQ/微信）统一：对手机返回 403 假响应拦掉 WS 握手，
 // 真 code 不消费、留给 bot（8 秒后接管）。
 const NAS = "http://192.168.31.12:3007";
@@ -31,14 +31,16 @@ if (!platform || !code) {
         $done(blockPhone());
     } else {
         console.log("[qqfarm] " + platform + " POST ver=" + ver + " -> " + NAS);
-        // 不显式指定 policy，让 Loon 自动根据规则走直连(家中Wi-Fi)或WireGuard回家(蜂窝外网)
+        // Loon 的 timeout 单位是毫秒 (ms)，务必传 10000 (10秒)，传 10 会导致 10ms 立即超时断开！
         $httpClient.post({
             url: NAS + "/api/ingest/code?t=" + TOKEN,
             headers: { "Content-Type": "application/json", "x-ingest-token": TOKEN },
             body: JSON.stringify({ platform: platform, code: code, ver: ver }),
-            timeout: 10
+            timeout: 10000
         }, function (err, resp, data) {
-            console.log("[qqfarm] resp err=" + (err ? err.message : "none") + " status=" + (resp ? resp.status : "none") + " body=" + String(data || "").slice(0, 150));
+            // Loon 的第一个参数 errormsg 是 String 类型（无 .message 属性）
+            const errStr = (err && typeof err === "object" ? err.message : err) || "none";
+            console.log("[qqfarm] resp err=" + errStr + " status=" + (resp ? resp.status : "none") + " body=" + String(data || "").slice(0, 150));
             var ok = !err && resp && resp.status === 200;
             var out = {};
             if (ok) {
@@ -49,7 +51,7 @@ if (!platform || !code) {
                 out = blockPhone();
                 console.log("[qqfarm] " + platform + " handshake blocked (403), code reserved for bot");
             } else {
-                let errMsg = (err && err.message) || (resp && ("HTTP " + resp.status)) || "无法连接 NAS (检查 Wi-Fi 或 WireGuard)";
+                let errMsg = (errStr !== "none" ? errStr : "") || (resp && ("HTTP " + resp.status)) || "无法连接 NAS (检查 Wi-Fi 或 WireGuard)";
                 $notification.post("QQ农场", (platform === "wx" ? "微信" : "QQ") + " code 提交失败", errMsg);
                 out = blockPhone();
             }
