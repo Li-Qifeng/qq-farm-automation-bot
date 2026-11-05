@@ -1,9 +1,9 @@
-#!name=QQ农场
-#!desc=自动抓取农场 code + 双号状态面板（脚本经 jsdelivr CDN 分发）
+#!name=QQ农场 Code 抓取
+#!desc=打开 QQ/微信 经典农场小程序时自动抓 code 并提交到 NAS。需先在 Loon 设置中为 gate-obt.nqf.qq.com 开启 MITM。
 
 [MITM]
 hostname = gate-obt.nqf.qq.com
 
 [Script]
-http-request gate-obt\.nqf\.qq\.com/prod/ws script-path=https://cdn.jsdelivr.net/gh/Li-Qifeng/qq-farm-automation-bot@main/loon/catch-v10.js, requires-body=false, timeout=15, tag=农场code抓取
+http-request gate-obt\.nqf\.qq\.com/prod/ws script-path=https://cdn.jsdelivr.net/gh/Li-Qifeng/qq-farm-automation-bot@main/loon/catch-v11.js, requires-body=false, timeout=15, tag=农场code抓取
 generic script-path=https://cdn.jsdelivr.net/gh/Li-Qifeng/qq-farm-automation-bot@main/loon/panel-v4.js, img-url=leaf, timeout=15, tag=农场状态面板
