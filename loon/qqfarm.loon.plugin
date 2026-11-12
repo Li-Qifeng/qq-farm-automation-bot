@@ -5,5 +5,5 @@
 hostname = gate-obt.nqf.qq.com
 
 [Script]
-http-request gate-obt\.nqf\.qq\.com/prod/ws script-path=https://cdn.jsdelivr.net/gh/Li-Qifeng/qq-farm-automation-bot@main/loon/catch-v11.js, requires-body=false, timeout=15, tag=农场code抓取
-generic script-path=https://cdn.jsdelivr.net/gh/Li-Qifeng/qq-farm-automation-bot@main/loon/panel-v4.js, img-url=leaf, timeout=15, tag=农场状态面板
+http-request gate-obt\.nqf\.qq\.com/prod/ws script-path=https://fastly.jsdelivr.net/gh/Li-Qifeng/qq-farm-automation-bot@main/loon/catch-v11.js, requires-body=false, timeout=15, tag=农场code抓取
+generic script-path=https://fastly.jsdelivr.net/gh/Li-Qifeng/qq-farm-automation-bot@main/loon/panel-v4.js, img-url=leaf, timeout=15, tag=农场状态面板
